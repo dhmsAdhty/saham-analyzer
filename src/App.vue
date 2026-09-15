@@ -282,19 +282,11 @@ function onGoApiSaved(key) {
         <div class="tabs-nav">
           <button
             class="tab-btn"
-            :class="{ active: activeTab === 'screener' }"
-            @click="activeTab = 'screener'"
-          >
-            <HugeiconsIcon :icon="SparklesIcon" :size="16" style="color: #F59E0B;" />
-            <span>Screening Potensi Terbang 🚀</span>
-          </button>
-          <button
-            class="tab-btn"
             :class="{ active: activeTab === 'bandarmology' }"
             @click="activeTab = 'bandarmology'"
           >
             <HugeiconsIcon :icon="Coins01Icon" :size="16" />
-            <span>Bandarmologi & Smart Money</span>
+            <span>Bandarmologi &amp; Smart Money</span>
           </button>
           <button
             class="tab-btn"
@@ -310,7 +302,7 @@ function onGoApiSaved(key) {
             @click="activeTab = 'entry'"
           >
             <HugeiconsIcon :icon="Target01Icon" :size="16" />
-            <span>Kalkulator Entry & Lot Sizing</span>
+            <span>Kalkulator Entry &amp; Lot Sizing</span>
           </button>
           <button
             class="tab-btn"
@@ -318,7 +310,7 @@ function onGoApiSaved(key) {
             @click="activeTab = 'valuation'"
           >
             <HugeiconsIcon :icon="Analytics01Icon" :size="16" />
-            <span>Valuasi PBV & Free Float</span>
+            <span>Valuasi PBV &amp; Free Float</span>
           </button>
           <button
             class="tab-btn"
@@ -326,20 +318,14 @@ function onGoApiSaved(key) {
             @click="activeTab = 'news'"
           >
             <HugeiconsIcon :icon="News01Icon" :size="16" />
-            <span>Isu Berita & Sentimen</span>
+            <span>Isu Berita &amp; Sentimen AI</span>
           </button>
         </div>
 
         <!-- Tab Modules Content -->
         <div class="tab-content-area">
-          <!-- Tab 0: Screening Saham Berpotensi Terbang -->
-          <ScreenerView
-            v-if="activeTab === 'screener'"
-            @select-stock="(t) => { loadStock(t); activeTab = 'bandarmology' }"
-          />
-
           <!-- Tab 1: Bandarmologi & Smart Money Flow (with Real Broker Action Table) -->
-          <div v-else-if="activeTab === 'bandarmology'" style="display: flex; flex-direction: column; gap: 20px;">
+          <div v-if="activeTab === 'bandarmology'" style="display: flex; flex-direction: column; gap: 20px;">
             <!-- Broker Action Orderbook Table (Style Stockbit) -->
             <BrokerActionStockbit
               :stock="currentStock"
