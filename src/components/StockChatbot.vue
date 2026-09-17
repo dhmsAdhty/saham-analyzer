@@ -6,7 +6,7 @@ import {
   HelpCircleIcon, RefreshIcon, Target01Icon,
   Coins01Icon, Analytics01Icon
 } from '@hugeicons/core-free-icons'
-import { generateChatbotResponse } from '../services/chatbotEngine.js'
+import { generateChatbotResponse, syncChatbotWithSqlite } from '../services/chatbotEngine.js'
 
 const props = defineProps({
   currentStock: {
@@ -25,18 +25,22 @@ const messages = ref([
   {
     id: 1,
     sender: 'ai',
-    text: 'Halo! Saya **Saham AI Assistant**. 📈\n\nSaya siap membantu kamu menganalisis saham Bursa Efek Indonesia (BEI): **Titik Entry Ideal, Stop Loss, Take Profit, Aksi Bandar / Smart Money, Valuasi PBV, hingga Kalkulator Lot**.\n\nSilakan tanyakan apa saja atau pilih pertanyaan cepat di bawah!',
+    text: 'Halo! Saya **Saham AI Assistant** 📈.\n\nSaya terhubung langsung ke **SQLite Database Pasar BEI Hari Ini**. Saya siap menganalisis seluruh saham bursa (Grup Pak Prajogo, Pak Hapsoro, Bakrie, Salim, Big Banks, dan emiten lainnya).\n\nKamu bisa tanya seputar:\n• **Kondisi Pasar Hari Ini & IHSG**\n• **Rekomendasi Saham Berpotensi Terbang**\n• **Titik Entry, Stop Loss & Take Profit Saham Apa Saja**\n• **Bandarmologi & Modal Bandar (VWAP)**',
     time: 'Baru saja',
   },
 ])
 
 const quickPrompts = [
-  'Berapa titik entry & SL saham ini?',
-  'Bagaimana aksi bandar hari ini?',
-  'Apakah valuasi PBV masih murah?',
-  'Simulasi alokasi lot modal 10 juta',
+  'Bagaimana kondisi market hari ini?',
   'Rekomendasi saham berpotensi terbang',
+  'Berapa titik entry BREN & BRMS?',
+  'Bagaimana aksi bandar saham RAJA?',
+  'Simulasi alokasi lot modal 10 juta',
 ]
+
+onMounted(() => {
+  syncChatbotWithSqlite()
+})
 
 function scrollToBottom() {
   nextTick(() => {

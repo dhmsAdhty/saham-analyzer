@@ -4,9 +4,11 @@ import { HugeiconsIcon } from '@hugeicons/vue'
 import {
   SparklesIcon, ArrowUp01Icon, ArrowDown01Icon,
   Coins01Icon, Target01Icon, FilterIcon,
-  CheckmarkCircle01Icon, AlertCircleIcon, Search01Icon
+  CheckmarkCircle01Icon, AlertCircleIcon, Search01Icon,
+  RefreshIcon
 } from '@hugeicons/core-free-icons'
 import { runStockScreener } from '../data/screenerEngine.js'
+import { syncMarketDb } from '../services/marketApi.js'
 
 const emit = defineEmits(['selectStock'])
 
@@ -14,6 +16,8 @@ const activeFilter = ref('all') // all | ready_to_fly | silent_acc | big_caps
 const screenerList = ref([])
 const searchQuery = ref('')
 const isLoading = ref(false)
+const isSyncing = ref(false)
+const syncMessage = ref('')
 
 async function loadScreener() {
   isLoading.value = true
@@ -21,6 +25,21 @@ async function loadScreener() {
     screenerList.value = await runStockScreener(activeFilter.value)
   } finally {
     isLoading.value = false
+  }
+}
+
+async function handleSyncClick() {
+  isSyncing.value = true
+  syncMessage.value = 'Menyinkronkan bursa ke SQLite...'
+  try {
+    const res = await syncMarketDb()
+    syncMessage.value = res.ok ? '✓ SQLite Terkini' : res.message
+    await loadScreener()
+  } finally {
+    setTimeout(() => {
+      isSyncing.value = false
+      syncMessage.value = ''
+    }, 2500)
   }
 }
 
@@ -43,13 +62,24 @@ onMounted(() => {
     <!-- Header Screener Banner -->
     <div class="screener-hero-banner">
       <div class="hero-left-content">
-        <div class="screener-badge">
-          <HugeiconsIcon :icon="SparklesIcon" :size="16" style="color: #F59E0B;" />
-          <span>RADAR SMART MONEY &amp; POTENSI TERBANG</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div class="screener-badge">
+            <HugeiconsIcon :icon="SparklesIcon" :size="16" style="color: #F59E0B;" />
+            <span>RADAR SMART MONEY &amp; POTENSI TERBANG</span>
+          </div>
+          <button
+            class="sqlite-sync-btn"
+            :disabled="isSyncing"
+            @click="handleSyncClick"
+            title="Tarik data harga bursa terbaru dan simpan ke SQLite Database"
+          >
+            <HugeiconsIcon :icon="RefreshIcon" :size="14" :class="{ spinning: isSyncing }" />
+            <span>{{ isSyncing ? (syncMessage || 'Menyinkronkan...') : (syncMessage || 'Sync SQLite Database') }}</span>
+          </button>
         </div>
         <h2 class="screener-title">Screening Saham Berpotensi Terbang (High Probability)</h2>
         <p class="screener-desc">
-          Memindai seluruh saham di bursa berdasarkan <b>Akumulasi Bandar Masif</b>, <b>Sentimen Berita Positif</b>, dan <b>Harga Pasar yang Masih Dekat dengan Modal Bandar (VWAP)</b>.
+          Memindai seluruh saham di bursa berdasarkan <b>Akumulasi Bandar Masif</b>, <b>Sentimen Berita Positif</b>, dan <b>Harga Pasar yang Masih Dekat dengan Modal Bandar (VWAP)</b>. Terkoneksi ke <b>SQLite Database</b> lokal.
         </p>
       </div>
 
@@ -223,7 +253,32 @@ onMounted(() => {
   padding: 4px 10px;
   border-radius: 8px;
   letter-spacing: 0.05em;
-  margin-bottom: 6px;
+}
+
+.sqlite-sync-btn {
+  border: 1px solid #334155;
+  background: #1E293B;
+  color: #38BDF8;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.sqlite-sync-btn:hover:not(:disabled) {
+  border-color: #38BDF8;
+  background: #243044;
+  color: #F8FAFC;
+}
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .screener-title {

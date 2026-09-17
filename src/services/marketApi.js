@@ -9,7 +9,21 @@ export async function fetchStockData(tickerInput) {
   const cleanTicker = (tickerInput || '').trim().toUpperCase().replace('.JK', '')
   if (!cleanTicker) return null
 
-  // 1. Prioritaskan SELALU ambil data pasar real-time langsung dari Yahoo Finance BEI Feed
+  // 1. Coba ambil dari SQLite Database terlebih dahulu
+  let dbStockData = null
+  try {
+    const dbRes = await fetch(`/api/db/stocks/${cleanTicker}`)
+    if (dbRes.ok) {
+      const json = await dbRes.json()
+      if (json.status === 'success' && json.data) {
+        dbStockData = json.data
+      }
+    }
+  } catch (e) {
+    console.warn('SQLite single stock fetch fallback:', e)
+  }
+
+  // 2. Jika ada live Yahoo quote, coba perbarui harga real-time
   let liveQuote = null
   try {
     const res = await fetch(`/api/yahoo/v8/finance/chart/${cleanTicker}.JK?interval=1d&range=5d`, {
@@ -23,17 +37,17 @@ export async function fetchStockData(tickerInput) {
       }
     }
   } catch (err) {
-    console.warn('Live Yahoo API fetch failed, falling back to database', err)
+    // console.warn('Live Yahoo API fetch failed, falling back to database', err)
   }
 
-  // 2. Ambil master metadata fundamental jika saham terdaftar
+  // Master catalog fallback jika SQLite belum memuat
   const masterStock = IDX_FULL_EMITEN.find((s) => s.ticker === cleanTicker) || IDX_STOCKS.find((s) => s.ticker === cleanTicker)
 
-  let effectivePrice = masterStock ? masterStock.price : 1000
-  let effectiveChange = masterStock ? masterStock.change : 0
-  let effectiveChangePct = masterStock ? masterStock.changePct : 0
+  let effectivePrice = dbStockData ? dbStockData.price : (masterStock ? masterStock.price : 1000)
+  let effectiveChange = dbStockData ? dbStockData.change : (masterStock ? masterStock.change : 0)
+  let effectiveChangePct = dbStockData ? dbStockData.change_pct : (masterStock ? masterStock.changePct : 0)
   let effectiveHistory = []
-  let isLiveActual = false
+  let isLiveActual = Boolean(dbStockData)
 
   if (liveQuote) {
     const meta = liveQuote.meta
@@ -60,14 +74,18 @@ export async function fetchStockData(tickerInput) {
     effectiveHistory = generateStockHistory(effectivePrice)
   }
 
-  // Siapkan objek emiten
+  // Siapkan objek emiten lengkap
   const stockObj = {
     ...(masterStock || {}),
+    ...(dbStockData || {}),
     ticker: cleanTicker,
-    name: masterStock?.name || liveQuote?.meta?.longName || `${cleanTicker} Tbk`,
-    sector: masterStock?.sector || 'Indonesia Equities',
-    subsector: masterStock?.subsector || 'Public Listed Company',
+    name: dbStockData?.name || masterStock?.name || liveQuote?.meta?.longName || `${cleanTicker} Tbk`,
+    sector: dbStockData?.sector || masterStock?.sector || 'Indonesia Equities',
+    subsector: dbStockData?.subsector || masterStock?.subsector || 'Public Listed Company',
     price: effectivePrice,
+    change: effectiveChange,
+    changePct: effectiveChangePct,
+    group: dbStockData?.group_name || masterStock?.group || 'Bursa Efek Indonesia',
     change: effectiveChange,
     changePct: effectiveChangePct,
     marketCap: masterStock?.marketCap || (effectivePrice * 15000000000),
@@ -205,6 +223,35 @@ export async function fetchStockData(tickerInput) {
 }
 
 export async function fetchIhsgData() {
+  // 1. Coba dari SQLite Database Backend
+  try {
+    const dbRes = await fetch('/api/db/market-summary')
+    if (dbRes.ok) {
+      const json = await dbRes.json()
+      if (json.status === 'success' && json.ihsg) {
+        const ihsg = json.ihsg
+        return {
+          price: Number(ihsg.price),
+          current: Number(ihsg.price),
+          change: Number(ihsg.change),
+          changePct: Number(ihsg.change_pct),
+          volume: '18.4 Miliar Lembar',
+          turnover: 'Rp 11.2 Triliun',
+          foreignFlow: ihsg.foreign_flow,
+          support1: ihsg.support_1,
+          support2: ihsg.support_2,
+          resistance1: ihsg.resistance_1,
+          resistance2: ihsg.resistance_2,
+          status: ihsg.status,
+          isLive: true
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('SQLite IHSG fetch fallback:', e)
+  }
+
+  // 2. Fallback ke Yahoo Finance Live
   try {
     const res = await fetch('/api/yahoo/v8/finance/chart/^JKSE?interval=1d&range=5d', {
       headers: { 'Accept': 'application/json' }
@@ -239,4 +286,17 @@ export async function fetchIhsgData() {
     console.warn('IHSG live fetch error', e)
   }
   return IHSG_DATA
+}
+
+export async function syncMarketDb() {
+  try {
+    const res = await fetch('/api/db/sync', { method: 'POST' })
+    if (res.ok) {
+      const json = await res.json()
+      return { ok: true, message: json.message }
+    }
+  } catch (e) {
+    return { ok: false, message: e.message }
+  }
+  return { ok: false, message: 'Gagal sinkronisasi SQLite' }
 }
