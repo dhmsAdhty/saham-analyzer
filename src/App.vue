@@ -19,6 +19,7 @@ import ValuationMatrix from './components/ValuationMatrix.vue'
 import NewsSentiment from './components/NewsSentiment.vue'
 import TradeDecisionCard from './components/TradeDecisionCard.vue'
 import ScreenerView from './components/ScreenerView.vue'
+import StockChatbot from './components/StockChatbot.vue'
 import GoApiModal from './components/GoApiModal.vue'
 
 import { fetchStockData, fetchIhsgData } from './services/marketApi.js'
@@ -377,6 +378,9 @@ function onGoApiSaved(key) {
       @close="showGoApiModal = false"
       @saved="onGoApiSaved"
     />
+
+    <!-- Saham AI Assistant Chatbot Widget -->
+    <StockChatbot :current-stock="currentStock" />
   </div>
 </template>
 
