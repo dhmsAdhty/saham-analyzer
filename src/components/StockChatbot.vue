@@ -31,10 +31,11 @@ const messages = ref([
 ])
 
 const quickPrompts = [
-  'Bagaimana kondisi market hari ini?',
-  'Rekomendasi saham berpotensi terbang',
+  'Bagaimana kondisi pasar BEI hari ini?',
+  'Rekomendasi saham siap terbang 🚀',
+  'Analisis saham Grup Pak Prajogo (BREN/CUAN)',
+  'Analisis saham Grup Pak Hapsoro (RAJA/PSAB)',
   'Berapa titik entry BREN & BRMS?',
-  'Bagaimana aksi bandar saham RAJA?',
   'Simulasi alokasi lot modal 10 juta',
 ]
 
@@ -58,7 +59,7 @@ function toggleChat() {
   }
 }
 
-function sendQuestion(text) {
+async function sendQuestion(text) {
   const query = text || userPrompt.value
   if (!query || !query.trim()) return
 
@@ -74,18 +75,25 @@ function sendQuestion(text) {
   isTyping.value = true
   scrollToBottom()
 
-  // Simulasi waktu respon AI realistis (300 - 600ms)
-  setTimeout(() => {
-    const aiAnswer = generateChatbotResponse(query, props.currentStock)
+  try {
+    const aiAnswer = await generateChatbotResponse(query, props.currentStock)
     messages.value.push({
       id: Date.now() + 1,
       sender: 'ai',
       text: aiAnswer,
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
     })
+  } catch (err) {
+    messages.value.push({
+      id: Date.now() + 1,
+      sender: 'ai',
+      text: `Maaf, terjadi kesalahan saat memproses data bursa: ${err.message}`,
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    })
+  } finally {
     isTyping.value = false
     scrollToBottom()
-  }, 400)
+  }
 }
 
 // Format markdown sederhana (bold, italic, list)

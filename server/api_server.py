@@ -30,13 +30,26 @@ class StockApiHandler(BaseHTTPRequestHandler):
         cursor = conn.cursor()
 
         try:
-            # 1. Endpoint List Semua Saham dari SQLite
+            # 1. Endpoint List Semua Saham dari SQLite (Joined dengan signals & bandarmology)
             if path == '/api/db/stocks' or path == '/api/db/stocks/':
                 group = query.get('group', [None])[0]
+                sql = '''
+                    SELECT 
+                        s.*,
+                        ts.entry_low, ts.entry_high, ts.stop_loss, ts.take_profit_1, ts.take_profit_2,
+                        ts.pivot, ts.support_1, ts.support_2, ts.resistance_1, ts.resistance_2,
+                        ts.atr, ts.risk_points, ts.reward_points, ts.risk_reward_ratio, ts.action_verdict,
+                        b.bandar_status, b.bandar_action, b.smart_money_score, b.smart_money_phase,
+                        b.vwap, b.net_top5_lot, b.net_top5_val, b.top1_buyer, b.top1_buyer_lot,
+                        b.top1_seller, b.top1_seller_lot
+                    FROM stocks s
+                    LEFT JOIN trade_signals ts ON s.ticker = ts.ticker
+                    LEFT JOIN bandarmology b ON s.ticker = b.ticker
+                '''
                 if group:
-                    cursor.execute('SELECT * FROM stocks WHERE group_name LIKE ? ORDER BY change_pct DESC', (f'%{group}%',))
+                    cursor.execute(sql + ' WHERE s.group_name LIKE ? ORDER BY s.change_pct DESC', (f'%{group}%',))
                 else:
-                    cursor.execute('SELECT * FROM stocks ORDER BY change_pct DESC')
+                    cursor.execute(sql + ' ORDER BY s.change_pct DESC')
                 
                 rows = [dict(row) for row in cursor.fetchall()]
                 self._respond_json({"status": "success", "count": len(rows), "data": rows})
